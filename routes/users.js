@@ -1,33 +1,63 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const { exec } = require('child_process');
 
-// Weak "database"
+// Fake DB
 let users = [
-    { id: 1, name: "Admin", role: "admin" }
+    { id: 1, username: "admin", role: "admin" },
+    { id: 2, username: "test", role: "user" }
 ];
 
-// Unsafe route (no validation)
-router.get('/:id', (req, res) => {
-    const id = req.params.id;
+// SQL Injection
+router.get('/sql/:username', (req, res) => {
+    const username = req.params.username;
 
-    // No validation → potential injection
-    const user = users.find(u => u.id == id);
+    // Vulnerable SQL query pattern
+    const query = `SELECT * FROM users WHERE username = '${username}'`;
 
-    if (!user) return res.status(404).send("User not found");
-
-    res.json(user);
+    res.send("Executed query: " + query);
 });
 
-// POST endpoint without validation
-router.post('/add', (req, res) => {
-    const newUser = {
-        id: Math.floor(Math.random() * 1000),
-        name: req.body.name
-    };
+//Command Injection
+router.get('/ping/:host', (req, res) => {
+    const host = req.params.host;
 
-    users.push(newUser);
+    exec(`ping -c 1 ${host}`, (err, output) => {
+        if (err) return res.send("Error");
+        res.send(output);
+    });
+});
 
-    res.json({ message: "User added", newUser });
+// Path Traversal
+router.get('/file/:name', (req, res) => {
+    const name = req.params.name;
+
+    const filePath = __dirname + '/../files/' + name;
+
+    res.sendFile(filePath);
+});
+
+// Weak crypto
+router.get('/weak-hash/:input', (req, res) => {
+    const crypto = require('crypto');
+    const input = req.params.input;
+
+    // MD5 hashing (insecure)
+    const hash = crypto.createHash('md5').update(input).digest('hex');
+
+    res.send("Weak MD5 hash: " + hash);
+});
+
+//Insecure login (no rate limiting)
+router.post('/login', (req, res) => {
+    const { username } = req.body;
+
+    const user = users.find(u => u.username === username);
+
+    if (!user) return res.status(401).send("Invalid login");
+
+    res.send("Logged in as " + username);
 });
 
 module.exports = router;
