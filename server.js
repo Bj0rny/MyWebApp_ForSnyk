@@ -1,25 +1,27 @@
+require('dotenv').config();
 const express = require('express');
+const helmet = require('helmet');
 const app = express();
 const users = require('./routes/users');
 
-// Hardcoded secret that Snyk will flag
-const AWS_KEY = "AKIAIOSFODNN7EXAMPLE";
-
-// Hardcoded private key
-const PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
-MIICeAIBADANBgkqhkiG9w0BAQEFAASCAmIwggJeAgEAAoGBALFakeKeyFakeKey
------END PRIVATE KEY-----`;
-
 app.use(express.json());
 
-// Insecure HTTP only
+//Disable X-Powered-By
+app.disable('x-powered-by');
+
+//Add secure headers
+app.use(helmet());
+
+//Load secrets from environment variables
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const AWS_KEY = process.env.AWS_KEY;
+
 app.get('/', (req, res) => {
-    res.send('Vulnerable Test App is running!');
+    res.send('Secure Test App is running!');
 });
 
 app.use('/users', users);
 
-//No security headers (Helmet disabled)
 app.listen(3000, () => {
-    console.log('App running on http://localhost:3000');
+    console.log('App running securely on http://localhost:3000');
 });
